@@ -7,5 +7,16 @@
 <body>
     <h1>你好，世界！</h1>
     <p>这是一个最简单的HTML文件。</p>
+    <p id="video-decoder-result"></p>
+    <script>
+        const result = document.getElementById('video-decoder-result');
+        if (typeof VideoDecoder !== 'undefined') {
+            result.textContent = 'VideoDecoder 可用';
+            result.style.color = 'green';
+        } else {
+            result.textContent = 'VideoDecoder 不可用';
+            result.style.color = 'red';
+        }
+    </script>
 </body>
 </html>
