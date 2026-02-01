@@ -1,22 +1,1392 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>简单HTML示例</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API 测试工具</title>
+    <!-- SparkMD5 库 -->
+    <script src="https://cdn.jsdelivr.net/npm/spark-md5@3.0.2/spark-md5.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .connection-status {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .status-disconnected {
+            background: #ff4757;
+            color: white;
+        }
+
+        .status-connected {
+            background: #2ed573;
+            color: white;
+        }
+
+        .test-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .test-panel h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+            font-size: 1.5em;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .input-group input,
+        .input-group textarea,
+        .input-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus,
+        .input-group textarea:focus,
+        .input-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .input-group textarea {
+            resize: vertical;
+            min-height: 80px;
+            font-family: monospace;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: #2ed573;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #26d06f;
+        }
+
+        .btn-danger {
+            background: #ff4757;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #ee5a6f;
+        }
+
+        .btn-warning {
+            background: #ffa502;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #ff9500;
+        }
+
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        #touchCanvas {
+            width: 100%;
+            height: 600px;
+            border: 3px solid #667eea;
+            border-radius: 10px;
+            cursor: crosshair;
+            background: #f8f9fa;
+            touch-action: none;
+        }
+
+        .touch-indicator {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border: 3px solid #667eea;
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            animation: pulse 0.3s ease-out;
+            background: rgba(102, 126, 234, 0.2);
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: translate(-50%, -50%) scale(0);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 0;
+            }
+        }
+
+        .log-container {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            margin-top: 15px;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            line-height: 1.5;
+        }
+
+        .log-time {
+            color: #858585;
+        }
+
+        .log-success {
+            color: #2ed573;
+        }
+
+        .log-error {
+            color: #ff4757;
+        }
+
+        .log-info {
+            color: #5089ff;
+        }
+
+        #screenshotImg {
+            max-width: 100%;
+            border-radius: 8px;
+            margin-top: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .file-info {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 <body>
-    <h1>你好，世界！</h1>
-    <p>这是一个最简单的HTML文件。</p>
-    <p id="video-decoder-result"></p>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 API 测试工具</h1>
+            <div id="connectionStatus" class="connection-status status-disconnected">
+                ⚠️ 未连接
+            </div>
+        </div>
+
+        <!-- 连接设置 -->
+        <div class="test-panel">
+            <h2>🔌 连接设置</h2>
+            <div class="input-group">
+                <label>WebSocket 地址:</label>
+                <input type="text" id="wsUrl" value="ws://171.11.98.67:8090" placeholder="ws://IP:端口">
+            </div>
+            <button class="btn btn-success" onclick="connect()">连接</button>
+            <button class="btn btn-danger" onclick="disconnect()">断开</button>
+        </div>
+
+        <div class="grid-2">
+            <!-- 触控测试 -->
+            <div class="test-panel">
+                <h2>👆 触控测试</h2>
+                <p style="color: #666; margin-bottom: 15px;">在下方画布上点击或拖动</p>
+                <div class="canvas-container">
+                    <canvas id="touchCanvas"></canvas>
+                </div>
+            </div>
+
+            <!-- 按键和输入 -->
+            <div>
+                <!-- 按键测试 -->
+                <div class="test-panel">
+                    <h2>⌨️ 按键测试</h2>
+                    <div class="input-group">
+                        <label>KeyCode:</label>
+                        <input type="number" id="keycode" value="4" placeholder="输入 KeyCode">
+                    </div>
+                    <button class="btn btn-primary" onclick="sendKey()">发送按键</button>
+                    <div style="margin-top: 15px; color: #666; font-size: 13px;">
+                        <strong>常用按键：</strong><br>
+                        <button class="btn btn-primary" onclick="sendKeyCode(3)">Home (3)</button>
+                        <button class="btn btn-primary" onclick="sendKeyCode(4)">Back (4)</button>
+                        <button class="btn btn-primary" onclick="sendKeyCode(24)">音量+ (24)</button>
+                        <button class="btn btn-primary" onclick="sendKeyCode(25)">音量- (25)</button>
+                    </div>
+                </div>
+
+                <!-- 文本输入测试 -->
+                <div class="test-panel">
+                    <h2>📝 文本输入测试</h2>
+                    <div class="input-group">
+                        <label>输入文本:</label>
+                        <input type="text" id="textInput" value="Hello World" placeholder="输入要发送的文本">
+                    </div>
+                    <button class="btn btn-primary" onclick="sendText()">发送文本</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Shell 命令测试 -->
+        <div class="test-panel">
+            <h2>🔧 Shell 命令测试</h2>
+            <div class="input-group">
+                <label>Shell 命令:</label>
+                <textarea id="shellCommand" placeholder="输入 Shell 命令，例如：ls -la /sdcard">ls -la /sdcard</textarea>
+            </div>
+            <button class="btn btn-warning" onclick="sendShell()">执行命令</button>
+            <div id="shellOutput" class="log-container" style="margin-top: 15px; display: none;">
+                <strong>命令输出：</strong>
+                <pre id="shellResult" style="margin-top: 10px; white-space: pre-wrap;"></pre>
+            </div>
+        </div>
+
+        <!-- 视频流测试 -->
+        <div class="test-panel">
+            <h2>📹 视频流测试</h2>
+            <div class="grid-2">
+                <div class="input-group">
+                    <label>分辨率:</label>
+                    <select id="videoResolution">
+                        <option value="360" selected>360p</option>
+                        <option value="540">540p</option>
+                        <option value="720">720p</option>
+                        <option value="1080">1080p</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>码率 (bps):</label>
+                    <input type="number" id="videoBitrate" value="1000000" step="100000">
+                </div>
+            </div>
+            <div class="input-group">
+                <label>帧率 (fps):</label>
+                <input type="number" id="videoFramerate" value="30" min="15" max="60">
+            </div>
+            <button class="btn btn-success" onclick="startVideo()">▶️ 开始视频流</button>
+            <button class="btn btn-danger" onclick="stopVideo()">⏹️ 停止视频流</button>
+            <div style="margin-top: 15px;">
+                <canvas id="videoCanvas" style="width: 100%; max-width: 400px; height: auto; border: 2px solid #667eea; border-radius: 8px; background: #000;"></canvas>
+            </div>
+            <div id="videoStats" style="margin-top: 10px; font-size: 13px; color: #666;"></div>
+        </div>
+
+        <!-- 截图测试 -->
+        <div class="test-panel">
+            <h2>📸 截图测试</h2>
+            <div class="grid-2">
+                <div class="input-group">
+                    <label>高度:</label>
+                    <input type="number" id="screenshotHeight" value="720" placeholder="图像高度">
+                </div>
+                <div class="input-group">
+                    <label>质量 (1-100):</label>
+                    <input type="number" id="screenshotQuality" value="80" min="1" max="100">
+                </div>
+            </div>
+            <div class="input-group">
+                <label>方向:</label>
+                <select id="screenshotRotation">
+                    <option value="1">竖屏 (1)</option>
+                    <option value="2">横屏 (2)</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="takeScreenshot()">📷 截图</button>
+            <button class="btn btn-success" onclick="downloadScreenshot()" id="downloadBtn" style="display: none;">💾 下载</button>
+            <img id="screenshotImg" style="display: none;">
+        </div>
+
+        <!-- 文件上传测试 -->
+        <div class="test-panel">
+            <h2>📤 文件上传测试</h2>
+            <div class="input-group">
+                <label>选择文件:</label>
+                <input type="file" id="fileInput" onchange="onFileSelected()">
+            </div>
+            <div class="input-group">
+                <label>保存路径:</label>
+                <input type="text" id="filePath" value="/sdcard/Download/" placeholder="/sdcard/Download/文件名（自动填充）">
+            </div>
+            <div id="fileInfo" class="file-info" style="display: none;"></div>
+            <button class="btn btn-success" onclick="smartUpload()">🚀 智能上传</button>
+            <div style="margin-top: 10px; font-size: 13px; color: #666;">
+                <strong>手动测试：</strong><br>
+                <button class="btn btn-primary" onclick="checkFileSize()">1️⃣ 检查大小</button>
+                <button class="btn btn-primary" onclick="checkFileMD5()">2️⃣ 检查MD5</button>
+                <button class="btn btn-warning" onclick="uploadFile()">3️⃣ 上传文件</button>
+            </div>
+            <div id="uploadProgress" style="display: none;">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill">0%</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 日志 -->
+        <div class="test-panel">
+            <h2>📋 日志</h2>
+            <button class="btn btn-danger" onclick="clearLog()">清空日志</button>
+            <div id="logContainer" class="log-container"></div>
+        </div>
+    </div>
+
     <script>
-        const result = document.getElementById('video-decoder-result');
-        if (typeof VideoDecoder !== 'undefined') {
-            result.textContent = 'VideoDecoder 可用';
-            result.style.color = 'green';
-        } else {
-            result.textContent = 'VideoDecoder 不可用';
-            result.style.color = 'red';
+        let ws = null;
+        let selectedFile = null;
+        let currentScreenshotUrl = null;
+        
+        // 视频流相关变量
+        let videoDecoder = null;
+        let videoCanvas = null;
+        let videoCtx = null;
+        let videoFrameCount = 0;
+        let videoStartTime = 0;
+        let spsData = null;
+        let ppsData = null;
+        let waitingForKeyFrame = true;
+        let firstH264DataReceived = false; // 标记是否已收到第一个 H264 数据包
+
+        // 连接 WebSocket
+        function connect() {
+            const url = document.getElementById('wsUrl').value;
+            
+            try {
+                ws = new WebSocket(url);
+                ws.binaryType = 'arraybuffer'; // 设置二进制数据类型为 ArrayBuffer
+                
+                ws.onopen = () => {
+                    updateConnectionStatus(true);
+                    log('success', '✅ WebSocket 连接成功');
+                };
+                
+                ws.onmessage = (event) => {
+                    if (event.data instanceof ArrayBuffer) {
+                        handleBinaryMessage(event.data);
+                    } else if (event.data instanceof Blob) {
+                        // Blob 需要转换为 ArrayBuffer
+                        event.data.arrayBuffer().then(buffer => {
+                            handleBinaryMessage(buffer);
+                        });
+                    } else {
+                        handleTextMessage(event.data);
+                    }
+                };
+                
+                ws.onerror = (error) => {
+                    log('error', '❌ WebSocket 错误: ' + error);
+                };
+                
+                ws.onclose = () => {
+                    updateConnectionStatus(false);
+                    log('info', '🔌 WebSocket 连接已关闭');
+                };
+            } catch (error) {
+                log('error', '❌ 连接失败: ' + error.message);
+            }
         }
+
+        // 断开连接
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+
+        // 更新连接状态
+        function updateConnectionStatus(connected) {
+            const status = document.getElementById('connectionStatus');
+            if (connected) {
+                status.textContent = '✅ 已连接';
+                status.className = 'connection-status status-connected';
+            } else {
+                status.textContent = '⚠️ 未连接';
+                status.className = 'connection-status status-disconnected';
+            }
+        }
+
+        // 处理文本消息
+        function handleTextMessage(data) {
+            try {
+                const msg = JSON.parse(data);
+                log('info', `📨 收到消息: ${msg.type}`);
+                
+                if (msg.type === 'shell' && msg.success) {
+                    document.getElementById('shellOutput').style.display = 'block';
+                    document.getElementById('shellResult').textContent = msg.data.output;
+                    log('success', '✅ Shell 命令执行成功');
+                } else if (msg.type === 'file_check_size') {
+                    if (msg.data.match) {
+                        log('success', `✅ 文件大小匹配 (${msg.data.actual_size} 字节)`);
+                    } else {
+                        log('info', `📥 文件不存在或大小不匹配`);
+                    }
+                } else if (msg.type === 'file_check_md5') {
+                    if (msg.data.match) {
+                        log('success', `⚡ MD5 匹配，可以秒传！`);
+                    } else {
+                        log('info', `📥 MD5 不匹配: ${msg.data.actual_md5}`);
+                    }
+                } else if (msg.type === 'file_upload') {
+                    log('info', `📤 已写入: ${msg.data.written} 字节`);
+                } else if (msg.type === 'file_upload_complete') {
+                    log('success', `✅ 文件上传成功！`);
+                    hideProgress();
+                } else if (!msg.success) {
+                    log('error', `❌ ${msg.type} 失败: ${msg.error}`);
+                }
+            } catch (error) {
+                log('error', '❌ 解析消息失败: ' + error.message);
+            }
+        }
+
+        // 处理二进制消息（截图）
+        function handleBinaryMessage(data) {
+            const bytes = new Uint8Array(data);
+            
+            if (bytes.length < 1) {
+                log('error', '❌ 收到空的二进制消息');
+                return;
+            }
+            
+            // 读取协议头（第1字节）
+            const msgType = bytes[0];
+            const payload = bytes.slice(1); // 实际数据从第2字节开始
+            
+            switch (msgType) {
+                case 0x00: // 视频流
+                    handleH264Data(payload);
+                    break;
+                    
+                case 0x01: // 截图
+                    handleScreenshotData(payload);
+                    break;
+                    
+                default:
+                    log('error', `❌ 未知的二进制消息类型: 0x${msgType.toString(16).padStart(2, '0')}`);
+            }
+        }
+        
+        // 处理截图数据
+        function handleScreenshotData(jpegData) {
+            const blob = new Blob([jpegData], { type: 'image/jpeg' });
+            
+            if (currentScreenshotUrl) {
+                URL.revokeObjectURL(currentScreenshotUrl);
+            }
+            
+            currentScreenshotUrl = URL.createObjectURL(blob);
+            
+            const img = document.getElementById('screenshotImg');
+            img.src = currentScreenshotUrl;
+            img.style.display = 'block';
+            
+            document.getElementById('downloadBtn').style.display = 'inline-block';
+            log('success', `✅ 截图已显示 (${jpegData.length} 字节)`);
+        }
+
+        // 发送消息
+        function sendMessage(type, data) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                log('error', '❌ WebSocket 未连接');
+                return false;
+            }
+            
+            const msg = JSON.stringify({ type, data });
+            ws.send(msg);
+            log('info', `📤 发送: ${type}`);
+            return true;
+        }
+
+        // 按键
+        function sendKey() {
+            const keycode = parseInt(document.getElementById('keycode').value);
+            sendMessage('key', { keycode });
+        }
+
+        function sendKeyCode(code) {
+            sendMessage('key', { keycode: code });
+        }
+
+        // 文本输入
+        function sendText() {
+            const text = document.getElementById('textInput').value;
+            sendMessage('text', { text });
+        }
+
+        // Shell 命令
+        function sendShell() {
+            const command = document.getElementById('shellCommand').value;
+            document.getElementById('shellOutput').style.display = 'none';
+            sendMessage('shell', { command });
+        }
+
+        // 截图
+        function takeScreenshot() {
+            const height = parseInt(document.getElementById('screenshotHeight').value);
+            const quality = parseInt(document.getElementById('screenshotQuality').value);
+            const rotation = parseInt(document.getElementById('screenshotRotation').value);
+            
+            sendMessage('screenshot', { height, quality, rotation });
+        }
+
+        // 下载截图
+        function downloadScreenshot() {
+            if (!currentScreenshotUrl) return;
+            
+            const a = document.createElement('a');
+            a.href = currentScreenshotUrl;
+            a.download = `screenshot_${Date.now()}.jpg`;
+            a.click();
+            
+            log('success', '💾 截图已下载');
+        }
+
+        // 文件选择
+        function onFileSelected() {
+            const input = document.getElementById('fileInput');
+            selectedFile = input.files[0];
+            
+            if (selectedFile) {
+                const info = `
+                    <strong>文件名：</strong>${selectedFile.name}<br>
+                    <strong>大小：</strong>${selectedFile.size} 字节<br>
+                    <strong>类型：</strong>${selectedFile.type || '未知'}
+                `;
+                document.getElementById('fileInfo').innerHTML = info;
+                document.getElementById('fileInfo').style.display = 'block';
+                
+                // 自动填充手机端路径
+                const filePath = `/sdcard/Download/${selectedFile.name}`;
+                document.getElementById('filePath').value = filePath;
+                
+                log('info', `📄 已选择文件: ${selectedFile.name} (${selectedFile.size} 字节)`);
+                log('info', `📂 保存路径: ${filePath}`);
+            }
+        }
+
+        // 检查文件大小
+        function checkFileSize() {
+            if (!selectedFile) {
+                log('error', '❌ 请先选择文件');
+                return;
+            }
+            
+            const path = document.getElementById('filePath').value;
+            sendMessage('file_check_size', {
+                path: path,
+                size: selectedFile.size
+            });
+        }
+
+        // 检查文件 MD5
+        async function checkFileMD5() {
+            if (!selectedFile) {
+                log('error', '❌ 请先选择文件');
+                return;
+            }
+            
+            log('info', '🔄 获取 MD5 中...');
+            showProgress();
+            updateProgress(50, '获取 MD5 中...');
+            const md5 = await calculateMD5(selectedFile);
+            hideProgress();
+            log('success', `✅ MD5: ${md5}`);
+            
+            const path = document.getElementById('filePath').value;
+            sendMessage('file_check_md5', {
+                path: path,
+                md5: md5
+            });
+        }
+
+        // 智能上传（推荐使用）
+        async function smartUpload() {
+            if (!selectedFile) {
+                log('error', '❌ 请先选择文件');
+                return;
+            }
+            
+            const path = document.getElementById('filePath').value;
+            
+            log('info', '🔍 步骤1: 检查文件大小...');
+            
+            // 步骤1: 检查文件大小
+            const sizeCheckPromise = new Promise((resolve) => {
+                const originalHandler = handleTextMessage;
+                handleTextMessage = (data) => {
+                    originalHandler(data);
+                    const msg = JSON.parse(data);
+                    if (msg.type === 'file_check_size') {
+                        handleTextMessage = originalHandler;
+                        resolve(msg);
+                    }
+                };
+            });
+            
+            sendMessage('file_check_size', {
+                path: path,
+                size: selectedFile.size
+            });
+            
+            const sizeResult = await sizeCheckPromise;
+            
+            if (sizeResult.data.match) {
+                // 大小一致，检查 MD5
+                log('info', '✅ 大小一致，继续检查MD5...');
+                log('info', '🔄 步骤2: 计算并检查MD5（这可能需要一些时间）...');
+                
+                showProgress();
+                updateProgress(50, '获取 MD5 中...');
+                const md5 = await calculateMD5(selectedFile);
+                hideProgress();
+                
+                log('success', `✅ MD5: ${md5}`);
+                
+                const md5CheckPromise = new Promise((resolve) => {
+                    const originalHandler = handleTextMessage;
+                    handleTextMessage = (data) => {
+                        originalHandler(data);
+                        const msg = JSON.parse(data);
+                        if (msg.type === 'file_check_md5') {
+                            handleTextMessage = originalHandler;
+                            resolve(msg);
+                        }
+                    };
+                });
+                
+                sendMessage('file_check_md5', {
+                    path: path,
+                    md5: md5
+                });
+                
+                const md5Result = await md5CheckPromise;
+                
+                if (md5Result.data.match) {
+                    // MD5 也一致，秒传成功！
+                    log('success', '⚡⚡⚡ 秒传成功！文件已存在且完全一致');
+                    return;
+                } else {
+                    log('info', '📥 MD5 不一致，需要重新上传');
+                }
+            } else {
+                // 大小不一致，直接上传（不需要计算MD5）
+                log('info', '📥 文件不存在或大小不一致，开始上传...');
+            }
+            
+            // 步骤3: 上传文件
+            await uploadFile();
+        }
+        
+        // 上传文件
+        async function uploadFile() {
+            if (!selectedFile) {
+                log('error', '❌ 请先选择文件');
+                return;
+            }
+            
+            const path = document.getElementById('filePath').value;
+            const CHUNK_SIZE = 500 * 1024; // 500KB 每片
+            let offset = 0;
+            
+            showProgress();
+            
+            log('info', `📤 开始上传: ${selectedFile.name} (${selectedFile.size} 字节)`);
+            log('info', `📦 分片大小: ${CHUNK_SIZE} 字节, 共 ${Math.ceil(selectedFile.size / CHUNK_SIZE)} 片`);
+            
+            const startTime = Date.now();
+            
+            while (offset < selectedFile.size) {
+                const chunk = selectedFile.slice(offset, offset + CHUNK_SIZE);
+                const arrayBuffer = await chunk.arrayBuffer();
+                
+                // 构造二进制消息
+                // [0:1]     消息类型 (0x02 = 文件上传)
+                // [1:9]     offset (int64, 大端序)
+                // [9:13]    path长度 (int32, 大端序)
+                // [13:13+n] path (UTF-8)
+                // [13+n:]   文件数据
+                const pathBytes = new TextEncoder().encode(path);
+                const binaryData = new Uint8Array(13 + pathBytes.length + arrayBuffer.byteLength);
+                
+                // 协议头
+                binaryData[0] = 0x02; // 文件上传
+                
+                // offset (8 字节，大端序)
+                const offsetView = new DataView(binaryData.buffer, 1, 8);
+                offsetView.setBigUint64(0, BigInt(offset), false); // false = 大端序
+                
+                // path 长度 (4 字节，大端序)
+                const pathLenView = new DataView(binaryData.buffer, 9, 4);
+                pathLenView.setUint32(0, pathBytes.length, false);
+                
+                // path
+                binaryData.set(pathBytes, 13);
+                
+                // 文件数据
+                binaryData.set(new Uint8Array(arrayBuffer), 13 + pathBytes.length);
+                
+                // 发送二进制数据
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(binaryData);
+                } else {
+                    log('error', '❌ WebSocket 连接已断开');
+                    hideProgress();
+                    return;
+                }
+                
+                offset += arrayBuffer.byteLength;
+                const progress = Math.min(100, (offset / selectedFile.size) * 100);
+                updateProgress(progress, `${offset} / ${selectedFile.size} 字节`);
+                
+                // 避免发送过快
+                await sleep(5);
+            }
+            
+            const uploadTime = ((Date.now() - startTime) / 1000).toFixed(2);
+            const speed = (selectedFile.size / 1024 / 1024 / uploadTime).toFixed(2);
+            log('success', `✅ 上传完成，耗时 ${uploadTime}s，平均速度 ${speed} MB/s`);
+            
+            // 上传完成，通知服务器验证文件大小
+            log('info', '🔄 正在验证文件大小...');
+            
+            sendMessage('file_upload_complete', {
+                path: path,
+                size: selectedFile.size
+            });
+            
+            hideProgress();
+        }
+
+        // 显示进度条
+        function showProgress() {
+            document.getElementById('uploadProgress').style.display = 'block';
+            updateProgress(0);
+        }
+
+        // 隐藏进度条
+        function hideProgress() {
+            document.getElementById('uploadProgress').style.display = 'none';
+        }
+
+        // 更新进度
+        function updateProgress(percent, text = null) {
+            const fill = document.getElementById('progressFill');
+            fill.style.width = percent + '%';
+            fill.textContent = text || (percent.toFixed(1) + '%');
+        }
+
+        // fileToBase64 函数已移除（改用二进制上传）
+
+        // 计算 MD5（使用 SparkMD5 库，支持进度回调）
+        async function calculateMD5(file, onProgress = null) {
+            return new Promise((resolve, reject) => {
+                const chunkSize = 2 * 1024 * 1024; // 2MB 每片
+                const chunks = Math.ceil(file.size / chunkSize);
+                let currentChunk = 0;
+                const spark = new SparkMD5.ArrayBuffer();
+                const fileReader = new FileReader();
+
+                fileReader.onload = function(e) {
+                    spark.append(e.target.result);
+                    currentChunk++;
+
+                    // 回调进度
+                    if (onProgress) {
+                        const percent = (currentChunk / chunks) * 100;
+                        onProgress(percent);
+                    }
+
+                    if (currentChunk < chunks) {
+                        loadNext();
+                    } else {
+                        resolve(spark.end());
+                    }
+                };
+
+                fileReader.onerror = function() {
+                    reject(new Error('文件读取失败'));
+                };
+
+                function loadNext() {
+                    const start = currentChunk * chunkSize;
+                    const end = Math.min(start + chunkSize, file.size);
+                    fileReader.readAsArrayBuffer(file.slice(start, end));
+                }
+
+                loadNext();
+            });
+        }
+
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+            if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+            return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+        }
+
+        // 延迟函数
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // 日志
+        function log(type, message) {
+            const container = document.getElementById('logContainer');
+            const time = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `<span class="log-time">[${time}]</span> <span class="log-${type}">${message}</span>`;
+            container.appendChild(entry);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // 清空日志
+        function clearLog() {
+            document.getElementById('logContainer').innerHTML = '';
+        }
+
+        // ============================================================
+        // 触控画布初始化
+        // ============================================================
+        // ============================================================
+        // 视频流相关函数
+        // ============================================================
+
+        // 初始化视频Canvas
+        function initVideoCanvas() {
+            videoCanvas = document.getElementById('videoCanvas');
+            if (!videoCanvas) return;
+            videoCtx = videoCanvas.getContext('2d', { alpha: false });
+        }
+
+        // 开始视频流
+        function startVideo() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                log('error', '❌ 请先连接 WebSocket');
+                return;
+            }
+
+            const resolution = parseInt(document.getElementById('videoResolution').value);
+            const bitrate = parseInt(document.getElementById('videoBitrate').value);
+            const framerate = parseInt(document.getElementById('videoFramerate').value);
+
+            sendMessage('video_config', { resolution, bitrate, framerate });
+            
+            videoFrameCount = 0;
+            videoStartTime = Date.now();
+            waitingForKeyFrame = true;
+            spsData = null;
+            ppsData = null;
+            firstH264DataReceived = false;
+            
+            log('info', `📹 启动视频流 (分辨率: ${resolution}p, 码率: ${bitrate}bps, 帧率: ${framerate}fps)`);
+        }
+
+
+        // 停止视频流
+        function stopVideo() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                log('error', '❌ WebSocket 未连接');
+                return;
+            }
+
+            sendMessage('video_stop', {});
+            
+            if (videoDecoder) {
+                try {
+                    videoDecoder.close();
+                } catch (e) {}
+                videoDecoder = null;
+            }
+            
+            videoFrameCount = 0;
+            waitingForKeyFrame = true;
+            spsData = null;
+            ppsData = null;
+            firstH264DataReceived = false;
+            
+            document.getElementById('videoStats').textContent = '';
+            log('info', '⏹️ 视频流已停止');
+        }
+
+        // 处理 H264 数据
+        function handleH264Data(data) {
+            // 第一次收到数据时打印日志
+            if (videoFrameCount === 0) {
+                log('info', `📹 开始接收 H264 数据流 (${data.length} 字节)`);
+            }
+            
+            const nalUnits = parseNALUnits(data);
+            
+            if (nalUnits.length === 0) {
+                log('error', '❌ 未解析到任何 NAL 单元');
+                return;
+            }
+            
+            // 第一次解析时打印所有 NAL 单元
+            if (videoFrameCount === 0 && nalUnits.length > 0) {
+                console.log(`📦 解析到 ${nalUnits.length} 个 NAL 单元:`);
+                nalUnits.forEach((nal, i) => {
+                    const type = nal[0] & 0x1F;
+                    const typeNames = {5: 'IDR', 7: 'SPS', 8: 'PPS', 1: 'P', 6: 'SEI'};
+                    console.log(`  [${i}] 类型=${type} (${typeNames[type] || '其他'}), 长度=${nal.length}, 前5字节=${Array.from(nal.slice(0, 5)).map(b => b.toString(16).padStart(2, '0')).join(' ')}`);
+                });
+            }
+            
+            for (const nal of nalUnits) {
+                const nalType = nal[0] & 0x1F;
+                
+                // 提取 SPS 和 PPS
+                if (nalType === 7) { // SPS
+                    spsData = nal;
+                    log('info', `✓ 提取到 SPS (${nal.length} 字节)`);
+                } else if (nalType === 8) { // PPS
+                    ppsData = nal;
+                    log('info', `✓ 提取到 PPS (${nal.length} 字节)`);
+                } else if (nalType === 5) { // IDR 关键帧
+                    log('info', `✓ 收到 IDR 关键帧 (${data.length} 字节)`);
+                    if (spsData && ppsData && !videoDecoder) {
+                        log('info', '📌 准备初始化解码器...');
+                        initVideoDecoder();
+                    }
+                    if (videoDecoder) {
+                        // 检查这个 IDR 帧是否包含 SPS/PPS
+                        let frameData = data;
+                        const hasConfigInFrame = nalUnits.some(n => {
+                            const t = n[0] & 0x1F;
+                            return t === 7 || t === 8;
+                        });
+                        
+                        // 如果是第一个关键帧且不包含 SPS/PPS，需要手动拼接
+                        if (videoFrameCount === 0 && !hasConfigInFrame) {
+                            log('info', '🔧 第一个关键帧缺少 SPS/PPS，正在拼接...');
+                            
+                            // 找到 IDR NAL 单元（不包含起始码）
+                            const idrNal = nalUnits.find(n => (n[0] & 0x1F) === 5);
+                            
+                            if (idrNal) {
+                                // 创建 Annex B 格式：00 00 00 01 SPS 00 00 00 01 PPS 00 00 00 01 IDR
+                                const startCode = new Uint8Array([0, 0, 0, 1]);
+                                const totalLength = startCode.length + spsData.length + 
+                                                  startCode.length + ppsData.length + 
+                                                  startCode.length + idrNal.length;
+                                frameData = new Uint8Array(totalLength);
+                                let offset = 0;
+                                
+                                // 添加 SPS
+                                frameData.set(startCode, offset);
+                                offset += startCode.length;
+                                frameData.set(spsData, offset);
+                                offset += spsData.length;
+                                
+                                // 添加 PPS
+                                frameData.set(startCode, offset);
+                                offset += startCode.length;
+                                frameData.set(ppsData, offset);
+                                offset += ppsData.length;
+                                
+                                // 添加 IDR（不包含起始码）
+                                frameData.set(startCode, offset);
+                                offset += startCode.length;
+                                frameData.set(idrNal, offset);
+                                
+                                // 打印详细调试信息
+                                console.log('🔍 拼接详情:');
+                                console.log('  SPS:', Array.from(spsData.slice(0, 10)).map(b => b.toString(16).padStart(2, '0')).join(' '), `... (${spsData.length} 字节)`);
+                                console.log('  PPS:', Array.from(ppsData).map(b => b.toString(16).padStart(2, '0')).join(' '), `(${ppsData.length} 字节)`);
+                                console.log('  IDR前10字节:', Array.from(idrNal.slice(0, 10)).map(b => b.toString(16).padStart(2, '0')).join(' '));
+                                console.log('  拼接后前50字节:', Array.from(frameData.slice(0, 50)).map(b => b.toString(16).padStart(2, '0')).join(' '));
+                                
+                                log('info', `✅ 拼接完成，新数据长度: ${frameData.length} 字节 (SPS:${spsData.length} + PPS:${ppsData.length} + IDR:${idrNal.length})`);
+                            }
+                        }
+                        
+                        decodeFrame(frameData, true);
+                        waitingForKeyFrame = false;
+                    } else {
+                        log('error', '❌ 解码器未初始化，无法解码关键帧');
+                    }
+                } else if (!waitingForKeyFrame && videoDecoder) {
+                    // P/B 帧（不打印日志，避免刷屏）
+                    decodeFrame(data, false);
+                }
+            }
+        }
+
+        // 解析 NAL 单元
+        function parseNALUnits(data) {
+            const nalUnits = [];
+            let i = 0;
+            
+            while (i < data.length) {
+                // 查找起始码 (00 00 00 01 或 00 00 01)
+                if (i + 3 < data.length && 
+                    data[i] === 0 && data[i+1] === 0 && data[i+2] === 0 && data[i+3] === 1) {
+                    i += 4;
+                    const start = i;
+                    
+                    // 查找下一个起始码或数据末尾
+                    while (i < data.length) {
+                        if (i + 3 < data.length && 
+                            ((data[i] === 0 && data[i+1] === 0 && data[i+2] === 0 && data[i+3] === 1) ||
+                             (data[i] === 0 && data[i+1] === 0 && data[i+2] === 1))) {
+                            break;
+                        }
+                        i++;
+                    }
+                    
+                    nalUnits.push(data.slice(start, i));
+                } else if (i + 2 < data.length && 
+                           data[i] === 0 && data[i+1] === 0 && data[i+2] === 1) {
+                    i += 3;
+                    const start = i;
+                    
+                    // 查找下一个起始码或数据末尾
+                    while (i < data.length) {
+                        if (i + 2 < data.length && data[i] === 0 && data[i+1] === 0 && data[i+2] === 1) {
+                            break;
+                        }
+                        if (i + 3 < data.length && data[i] === 0 && data[i+1] === 0 && data[i+2] === 0 && data[i+3] === 1) {
+                            break;
+                        }
+                        i++;
+                    }
+                    
+                    nalUnits.push(data.slice(start, i));
+                } else {
+                    i++;
+                }
+            }
+            
+            return nalUnits;
+        }
+
+        // 初始化视频解码器
+        function initVideoDecoder() {
+            if (!spsData || !ppsData) {
+                log('error', '❌ 缺少 SPS/PPS 配置数据');
+                return;
+            }
+
+            try {
+                // 从 SPS 中提取 profile, level 信息
+                const profile = spsData[1];
+                const compatibility = spsData[2];
+                const level = spsData[3];
+                const codec = `avc1.${profile.toString(16).padStart(2, '0')}${compatibility.toString(16).padStart(2, '0')}${level.toString(16).padStart(2, '0')}`;
+                
+                log('info', `📊 解码器配置: ${codec}`);
+
+                videoDecoder = new VideoDecoder({
+                    output: (frame) => {
+                        // 第一帧输出时打印日志
+                        if (videoFrameCount === 0) {
+                            log('success', `✅ 收到第一帧！分辨率: ${frame.displayWidth}x${frame.displayHeight}`);
+                            console.log('✅ 解码器 output 回调被触发！', frame);
+                        }
+                        
+                        // 渲染视频帧到 canvas
+                        if (videoCanvas && videoCtx) {
+                            videoCanvas.width = frame.displayWidth;
+                            videoCanvas.height = frame.displayHeight;
+                            videoCtx.drawImage(frame, 0, 0);
+                        }
+                        frame.close();
+                        
+                        videoFrameCount++;
+                        updateVideoStats();
+                    },
+                    error: (e) => {
+                        log('error', `❌ 解码错误: ${e.message}`);
+                        console.error('❌ 解码器 error 回调被触发:', e);
+                    }
+                });
+
+                videoDecoder.configure({
+                    codec: codec,
+                    optimizeForLatency: true,
+                    hardwareAcceleration: 'prefer-hardware'
+                });
+
+                log('success', `✅ 解码器已初始化并配置完成`);
+                log('info', `📌 解码器状态: ${videoDecoder.state}`);
+            } catch (error) {
+                log('error', `❌ 初始化解码器失败: ${error.message}`);
+            }
+        }
+
+        // 解码视频帧
+        function decodeFrame(data, isKeyFrame) {
+            if (!videoDecoder) {
+                log('error', '❌ 解码器为 null');
+                return;
+            }
+            
+            if (videoDecoder.state !== 'configured') {
+                log('error', `❌ 解码器状态错误: ${videoDecoder.state}`);
+                return;
+            }
+
+            try {
+                const chunk = new EncodedVideoChunk({
+                    type: isKeyFrame ? 'key' : 'delta',
+                    timestamp: Date.now() * 1000,
+                    data: data
+                });
+                
+                // 第一次解码时打印日志
+                if (videoFrameCount === 0 && isKeyFrame) {
+                    log('info', `📥 开始解码第一个关键帧 (${data.length} 字节)`);
+                    console.log('📥 EncodedVideoChunk 创建成功，准备调用 decode()');
+                }
+                
+                videoDecoder.decode(chunk);
+                
+                if (videoFrameCount === 0 && isKeyFrame) {
+                    console.log('✅ decode() 调用完成，等待 output 回调...');
+                    console.log('📊 解码器队列长度:', videoDecoder.decodeQueueSize);
+                }
+            } catch (error) {
+                log('error', `❌ 解码失败: ${error.message}`);
+                console.error('❌ decode() 抛出异常:', error);
+            }
+        }
+
+        // 更新视频统计信息
+        function updateVideoStats() {
+            if (videoFrameCount % 30 === 0) { // 每30帧更新一次
+                const elapsed = (Date.now() - videoStartTime) / 1000;
+                const fps = videoFrameCount / elapsed;
+                document.getElementById('videoStats').textContent = 
+                    `📊 帧数: ${videoFrameCount} | FPS: ${fps.toFixed(1)}`;
+            }
+        }
+
+        // ============================================================
+        // 触控测试相关函数
+        // ============================================================
+
+        const canvas = document.getElementById('touchCanvas');
+        const canvasContainer = canvas.parentElement;
+
+        function initTouchCanvas() {
+            // 设置画布尺寸
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+
+            let isMouseDown = false;
+
+            // 获取标准化坐标
+            function getNormalizedCoords(e) {
+                const rect = canvas.getBoundingClientRect();
+                const x = (e.clientX - rect.left) / rect.width;
+                const y = (e.clientY - rect.top) / rect.height;
+                return { x: Math.max(0, Math.min(1, x)), y: Math.max(0, Math.min(1, y)) };
+            }
+
+            // 显示触摸指示器
+            function showTouchIndicator(e) {
+                const rect = canvas.getBoundingClientRect();
+                const indicator = document.createElement('div');
+                indicator.className = 'touch-indicator';
+                indicator.style.left = (e.clientX - rect.left) + 'px';
+                indicator.style.top = (e.clientY - rect.top) + 'px';
+                canvasContainer.appendChild(indicator);
+                setTimeout(() => indicator.remove(), 300);
+            }
+
+            // 鼠标事件
+            canvas.addEventListener('mousedown', (e) => {
+                isMouseDown = true;
+                const coords = getNormalizedCoords(e);
+                showTouchIndicator(e);
+                sendMessage('touch', { x: coords.x, y: coords.y, action: 0 });
+            });
+
+            canvas.addEventListener('mousemove', (e) => {
+                if (!isMouseDown) return;
+                const coords = getNormalizedCoords(e);
+                sendMessage('touch', { x: coords.x, y: coords.y, action: 2 });
+            });
+
+            canvas.addEventListener('mouseup', (e) => {
+                if (!isMouseDown) return;
+                isMouseDown = false;
+                const coords = getNormalizedCoords(e);
+                sendMessage('touch', { x: coords.x, y: coords.y, action: 1 });
+            });
+
+            canvas.addEventListener('mouseleave', (e) => {
+                if (isMouseDown) {
+                    isMouseDown = false;
+                    const coords = getNormalizedCoords(e);
+                    sendMessage('touch', { x: coords.x, y: coords.y, action: 1 });
+                }
+            });
+
+            // 触摸屏事件
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const fakeEvent = { clientX: touch.clientX, clientY: touch.clientY };
+                const coords = getNormalizedCoords(fakeEvent);
+                showTouchIndicator(fakeEvent);
+                sendMessage('touch', { x: coords.x, y: coords.y, action: 0 });
+            });
+
+            canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const fakeEvent = { clientX: touch.clientX, clientY: touch.clientY };
+                const coords = getNormalizedCoords(fakeEvent);
+                sendMessage('touch', { x: coords.x, y: coords.y, action: 2 });
+            });
+
+            canvas.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                const touch = e.changedTouches[0];
+                const fakeEvent = { clientX: touch.clientX, clientY: touch.clientY };
+                const coords = getNormalizedCoords(fakeEvent);
+                sendMessage('touch', { x: coords.x, y: coords.y, action: 1 });
+            });
+        }
+
+        // 页面加载完成后初始化
+        window.onload = () => {
+            initTouchCanvas();
+            initVideoCanvas();
+            log('info', '📱 测试工具已就绪');
+            
+            // 检查浏览器支持
+            if (!('VideoDecoder' in window)) {
+                log('error', '❌ 浏览器不支持 WebCodecs API，无法播放视频流（需要 Chrome 94+ 或 Edge 94+）');
+            }
+        };
+
+        // 页面卸载时（刷新/关闭）
+        window.onbeforeunload = () => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                console.log('🔄 页面即将刷新/关闭，WebSocket 将自动断开');
+                ws.close();
+            }
+        };
     </script>
 </body>
 </html>
+

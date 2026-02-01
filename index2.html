@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多手机 API 测试工具</title>
+    <script src="./spark-md5.min.js"></script>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: system-ui, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .main-layout {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* 左侧列表 */
+        .sidebar {
+            width: 320px;
+            background: rgba(255,255,255,0.95);
+            border-right: 1px solid #ddd;
+            padding: 15px;
+            overflow-y: auto;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+
+        .sidebar h2 {
+            margin: 0 0 12px 0;
+            color: #1e40af;
+            font-size: 1.1em;
+        }
+
+        .device-item {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #e0e0e0;
+            transition: all 0.2s;
+            font-size: 12px;
+        }
+
+        .device-item:hover,
+        .device-item.active {
+            background: #e0f2fe;
+            border-color: #3b82f6;
+        }
+
+        .device-item .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .device-item label {
+            display: block;
+            margin: 6px 0 3px;
+            font-weight: 500;
+            font-size: 12px;
+        }
+
+        .device-item input,
+        .device-item select {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            margin-bottom: 5px;
+            font-size: 12px;
+        }
+
+        .device-item .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 8px;
+        }
+
+        .btn {
+            padding: 6px 8px;
+            font-size: 11px;
+            min-width: 50px;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .btn-success { background:#10b981; color:white; }
+        .btn-danger  { background:#ef4444; color:white; }
+        .btn-primary { background:#3b82f6; color:white; }
+        .btn-warning { background:#f59e0b; color:white; }
+
+        .add-device-btn {
+            width: 100%;
+            padding: 10px;
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-top: 12px;
+        }
+
+        .user-info {
+            background: #e8f4fd;
+            border: 1px solid #bee3f8;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 12px;
+            font-size: 12px;
+        }
+
+        .user-info strong {
+            color: #1e40af;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .user-info span {
+            color: #333;
+            font-weight: 500;
+        }
+
+        .user-info a {
+            display: inline-block;
+            margin-top: 8px;
+            color: #dc2626;
+            text-decoration: none;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .user-info a:hover {
+            text-decoration: underline;
+        }
+
+        .admin-actions {
+            background: #fef3c7;
+            border: 1px solid #fcd34d;
+            border-radius: 8px;
+            padding: 10px;
+        }
+
+        .admin-link {
+            display: block;
+            text-align: center;
+            color: #92400e;
+            text-decoration: none;
+            font-weight: 600;
+            padding: 8px;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .admin-link:hover {
+            background: #fde68a;
+        }
+
+        /* 右侧内容 */
+        .content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 { text-align: center; color: white; margin-bottom: 15px; text-shadow: 1px 1px 4px #0006; font-size: 1.5em; }
+
+        .controls {
+            background: rgba(255,255,255,0.9);
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .scale-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #333;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .scale-control input[type="range"] {
+            width: 200px;
+        }
+
+        .phones-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: flex-start;
+        }
+
+        .phone-panel {
+            flex-shrink: 0;
+        }
+
+        .phone-panel {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+            overflow: hidden;
+        }
+
+        .phone-header {
+            background: #1e40af;
+            color: white;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .phone-header .status {
+            padding: 2px 6px;
+            border-radius: 8px;
+            font-size: 10px;
+        }
+        .status-disconnected { background:#ef4444; }
+        .status-connected   { background:#10b981; }
+
+        .phone-content {
+            padding: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .canvas-inner {
+            background: #000;
+            position: relative;
+            width: 180px;
+            height: 320px;
+        }
+
+        .canvas-inner canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            margin: 0;
+            transform-origin: top left;
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .control-btn {
+            flex: 1;
+            padding: 8px 4px;
+            font-size: 11px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .menu-btn { background: #3b82f6; color: white; }
+        .home-btn { background: #10b981; color: white; }
+        .back-btn { background: #f59e0b; color: white; }
+
+        .control-btn:hover {
+            opacity: 0.8;
+        }
+
+        .canvas-container {
+            margin: 10px auto;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+
+        canvas {
+            display: block;
+            width: 360px;
+            height: 640px;
+            object-fit: contain;
+            background: #000;
+            touch-action: none;
+            cursor: crosshair;
+            transform-origin: 15px 15px;
+            transition: none;
+        }
+
+        .touch-indicator {
+            position: absolute;
+            width: 44px; height: 44px;
+            border: 3px solid #3b82f6;
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            animation: pulse 0.4s ease-out;
+            background: rgba(59,130,246,0.25);
+        }
+
+        @keyframes pulse {
+            0% { transform: translate(-50%,-50%) scale(0); opacity:1; }
+            100% { transform: translate(-50%,-50%) scale(2); opacity:0; }
+        }
+
+        .log-box {
+            background: #111;
+            color: #d4d4d4;
+            font-family: 'Consolas', monospace;
+            font-size: 12px;
+            height: 140px;
+            overflow-y: auto;
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 12px;
+            border: 1px solid #333;
+            display: none;
+        }
+
+        .log-entry { margin: 2px 0; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+
+<div class="main-layout">
+    <!-- 左侧设备列表（包含所有配置） -->
+    <div class="sidebar">
+        <h2>设备列表</h2>
+        <div class="user-info">
+            <strong>当前用户:</strong> <span id="displayUsername">未登录</span>
+            <a href="#" id="logoutBtn" onclick="handleLogout()">退出登录</a>
+        </div>
+        <div id="deviceList"></div>
+    </div>
+
+    <!-- 右侧纯画面区 -->
+    <div class="content">
+        <div class="container">
+            <h1>多手机控制台</h1>
+
+            <div class="controls" id="mainControls">
+                <div class="scale-control">
+                    <label>画面缩放：</label>
+                    <input type="range" id="canvasScale" min="0.3" max="2.0" step="0.1" value="1.0">
+                    <span id="scaleDisplay">100%</span>
+                </div>
+            </div>
+            <div class="phones-grid" id="phonesContainer"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 检查 VideoDecoder 支持
+    console.log('页面加载时 VideoDecoder 状态:', typeof VideoDecoder);
+    console.log('浏览器信息:', navigator.userAgent);
+
+    // =============================================
+    //  Phone 类（每个设备实例）
+    // =============================================
+    class Phone {
+        constructor(id, name = `手机 ${id}`, wsUrl = "ws://192.168.18.11:8090") {
+            this.id = id;
+            this.name = name;
+            this.ws = null;
+            this.wsUrl = wsUrl;
+            this.resolution = "720";
+            this.bitrate = 1000000;
+            this.framerate = 30;
+
+            this.videoDecoder = null;
+            this.videoCanvas = null;
+            this.videoCtx = null;
+            this.videoFrameCount = 0;
+            this.videoStartTime = 0;
+            this.spsData = null;
+            this.ppsData = null;
+            this.waitingForKeyFrame = true;
+            this.lastRotation = -1;  // 记录上次的旋转角度
+
+            this.listItem = null;
+            this.panel = null;
+            this.statusEl = null;
+            this.nameEl = null;
+            this.videoStatsEl = null;
+
+            this.createListItem();
+            this.createPanel();
+        }
+
+        createListItem() {
+            const list = document.getElementById("deviceList");
+            const item = document.createElement("div");
+            item.className = "device-item";
+            item.id = `list-item-${this.id}`;
+
+            item.innerHTML = `
+            <div class="header">
+                <strong>${this.name}</strong>
+                <span class="status status-disconnected" id="list-status-${this.id}">未连接</span>
+            </div>
+            <div style="margin-top:8px; color:#666; font-size:11px;">自动连接中...</div>
+        `;
+            list.appendChild(item);
+            this.listItem = item;
+
+            // 点击列表项高亮右侧面板
+            item.addEventListener('click', (e) => {
+                if (!e.target.closest('button') && !e.target.closest('input') && !e.target.closest('select')) {
+                    document.querySelectorAll('.phone-panel').forEach(p => p.classList.remove('active'));
+                    document.querySelectorAll('.device-item').forEach(li => li.classList.remove('active'));
+                    document.getElementById(`panel-${this.id}`).classList.add('active');
+                    item.classList.add('active');
+                }
+            });
+        }
+
+        createPanel() {
+            const container = document.getElementById("phonesContainer");
+            const panel = document.createElement("div");
+            panel.className = "phone-panel";
+            panel.id = `panel-${this.id}`;
+            panel.innerHTML = `
+            <div class="phone-header">
+                <span id="phone-name-${this.id}">${this.name}</span>
+                <span class="status status-disconnected" id="status-${this.id}">未连接</span>
+                <button class="remove-btn">×</button>
+            </div>
+            <div class="phone-content">
+                <div class="canvas-inner">
+                    <canvas id="canvas-${this.id}"></canvas>
+                </div>
+                <div id="videoStats-${this.id}" style="text-align:center; margin:8px 0; color:#555;"></div>
+                <div class="control-buttons">
+                    <button class="control-btn menu-btn" data-action="menu">菜单</button>
+                    <button class="control-btn home-btn" data-action="home">主页</button>
+                    <button class="control-btn back-btn" data-action="back">返回</button>
+                </div>
+            </div>
+        `;
+            container.appendChild(panel);
+            this.panel = panel;
+            this.statusEl = panel.querySelector(`#status-${this.id}`);
+            this.nameEl = panel.querySelector(`#phone-name-${this.id}`);
+            this.videoStatsEl = panel.querySelector(`#videoStats-${this.id}`);
+            this.videoCanvas = panel.querySelector(`#canvas-${this.id}`);
+
+            setTimeout(() => {
+                if (this.videoCanvas) {
+                    this.videoCanvas.width = 360;
+                    this.videoCanvas.height = 640;
+                    this.videoCanvas.style.width = '180px';
+                    this.videoCanvas.style.height = '320px';
+                    this.videoCanvas.style.display = 'block';
+                    this.videoCanvas.style.margin = '0';
+                    this.videoCtx = this.videoCanvas.getContext('2d', { alpha: false });
+                    if (this.videoCtx) {
+                        this.videoCtx.fillStyle = '#000';
+                        this.videoCtx.fillRect(0, 0, 360, 640);
+                        this.initCanvasTouch();
+                    }
+                }
+            }, 0);
+
+            panel.querySelector('.remove-btn').addEventListener('click', () => this.remove());
+
+            // 添加控制按钮事件
+            panel.querySelectorAll('.control-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const action = e.target.dataset.action;
+                    this.handleControlButton(action);
+                });
+            });
+        }
+
+        handleControlButton(action) {
+            // 根据不同的按钮发送不同的按键消息
+            let keycode;
+            switch(action) {
+                case 'menu':
+                    keycode = 82; // MENU键
+                    break;
+                case 'home':
+                    keycode = 3; // HOME键
+                    break;
+                case 'back':
+                    keycode = 4; // BACK键
+                    break;
+                default:
+                    return;
+            }
+            this.send({ type: 'key', data: { keycode } });
+        }
+
+        updateName(name) {
+            this.name = name;
+            if (this.nameEl) {
+                this.nameEl.textContent = name;
+            }
+        }
+
+        updateStatus(connected) {
+            const text = connected ? "已连接" : "未连接";
+            const cls = connected ? "status-connected" : "status-disconnected";
+            this.statusEl.textContent = text;
+            this.statusEl.className = `status ${cls}`;
+            // 同步左侧列表状态
+            const listStatus = document.getElementById(`list-status-${this.id}`);
+            if (listStatus) {
+                listStatus.textContent = text;
+                listStatus.className = `status ${cls}`;
+            }
+        }
+
+        connect() {
+            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                return;
+            }
+
+            // 获取当前登录用户的用户名作为 token
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            const token = currentUser ? currentUser.username : '';
+
+            // 在 WebSocket URL 中添加 token 参数
+            let url = this.wsUrl;
+            if (token) {
+                const separator = url.includes('?') ? '&' : '?';
+                url = `${url}${separator}token=${encodeURIComponent(token)}`;
+            }
+
+            try {
+                this.ws = new WebSocket(url);
+                this.ws.binaryType = "arraybuffer";
+
+                this.ws.onopen = () => {
+                    this.updateStatus(true);
+                };
+
+                this.ws.onmessage = (e) => {
+                    let bytes = 0;
+                    if (e.data instanceof ArrayBuffer) {
+                        bytes = e.data.byteLength;
+                        this.handleBinary(e.data);
+                    } else if (e.data instanceof Blob) {
+                        bytes = e.data.size;
+                        e.data.arrayBuffer().then(buffer => this.handleBinary(buffer));
+                    } else {
+                        bytes = e.data.length;
+                        this.handleText(e.data);
+                    }
+                };
+
+                this.ws.onclose = () => {
+                    this.updateStatus(false);
+                };
+
+                this.ws.onerror = () => {};
+            } catch (err) {}
+        }
+
+        disconnect() {
+            if (this.ws) {
+                this.ws.close();
+                this.ws = null;
+                this.updateStatus(false);
+            }
+        }
+
+        startVideo() {
+            if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+                return;
+            }
+
+            this.send({
+                type: 'video_config',
+                data: {
+                    resolution: parseInt(this.resolution),
+                    bitrate: this.bitrate,
+                    framerate: this.framerate
+                }
+            });
+
+            this.videoFrameCount = 0;
+            this.videoStartTime = Date.now();
+            this.waitingForKeyFrame = true;
+            this.spsData = this.ppsData = null;
+        }
+
+        stopVideo() {
+            this.send({type: 'video_stop', data: {}});
+            this.videoDecoder = null;
+            this.videoFrameCount = 0;
+            this.videoStartTime = 0;
+            this.waitingForKeyFrame = true;
+            this.spsData = this.ppsData = null;
+            this.videoStatsEl.textContent = '';
+        }
+
+        startNormalQuality() {
+            this.resolution = "540";
+            this.bitrate = 700000;
+            this.framerate = 20;
+            this.startVideo();
+        }
+
+        startHDQuality() {
+            this.resolution = "720";
+            this.bitrate = 1000000;
+            this.framerate = 30;
+            this.startVideo();
+        }
+
+        send(msg) {
+            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                this.ws.send(JSON.stringify(msg));
+            }
+        }
+
+        handleText(data) {
+            try {
+                JSON.parse(data);
+            } catch (e) {}
+        }
+
+        handleBinary(data) {
+            const bytes = new Uint8Array(data);
+            if (bytes.length < 1) return;
+
+            const msgType = bytes[0];
+            const payload = bytes.slice(1);
+
+            if (msgType === 0x00) {
+                // 第一个字节是 rotation 旋转角度信息
+                if (payload.length > 0) {
+                    const rotation = payload[0];
+                    const h264Data = payload.slice(1);
+
+                    // 检测横竖屏变化
+                    if (rotation !== this.lastRotation) {
+                        const oldRotation = this.lastRotation;
+                        this.lastRotation = rotation;
+
+                        const oldStr = oldRotation === 0 ? '0° (竖屏)' : oldRotation === 1 ? '90° (横屏)' : `未知(${oldRotation}°)`;
+                        const newStr = rotation === 0 ? '0° (竖屏)' : rotation === 1 ? '90° (横屏)' : `未知(${rotation}°)`;
+                        console.log(`[手机${this.id}] 旋转角度变化: ${oldStr} -> ${newStr}`);
+
+                        // 横竖屏切换时，关闭并重置解码器
+                        if (this.videoDecoder) {
+                            this.videoDecoder.close();
+                            this.videoDecoder = null;
+                        }
+                        this.spsData = null;
+                        this.ppsData = null;
+                        this.waitingForKeyFrame = true;
+                        this.videoFrameCount = 0; // 重置帧计数器，以便重新解析第一帧
+
+                        // 清空 canvas 背景
+                        if (this.videoCtx && this.videoCanvas) {
+                            this.videoCtx.fillStyle = '#000';
+                            this.videoCtx.fillRect(0, 0, this.videoCanvas.width, this.videoCanvas.height);
+                        }
+
+                        console.log(`[手机${this.id}] 解码器已重置，等待新的 SPS/PPS`);
+                    }
+
+                    this.handleH264Data(h264Data);
+                }
+            }
+        }
+
+        handleH264Data(data) {
+            const nalUnits = this.parseNALUnits(data);
+            if (nalUnits.length === 0) return;
+
+            if (this.videoFrameCount === 0) {
+                console.log(`手机${this.id} - 解析到 ${nalUnits.length} 个 NAL:`);
+                nalUnits.forEach((nal, i) => {
+                    const type = nal[0] & 0x1F;
+                    const names = {5:'IDR',7:'SPS',8:'PPS',1:'P',6:'SEI'};
+                    console.log(`  [${i}] ${type} (${names[type]||'其他'}), len=${nal.length}`);
+                });
+            }
+
+            for (const nal of nalUnits) {
+                const type = nal[0] & 0x1F;
+                if (type === 7) {
+                    this.spsData = nal;
+                } else if (type === 8) {
+                    this.ppsData = nal;
+                } else if (type === 5) {
+                    if (this.spsData && this.ppsData && !this.videoDecoder) {
+                        this.initVideoDecoder();
+                    }
+                    if (this.videoDecoder) {
+                        let frameData = data;
+                        if (this.videoFrameCount === 0 && !nalUnits.some(n => (n[0]&0x1F)===7 || (n[0]&0x1F)===8)) {
+                            const idr = nalUnits.find(n => (n[0]&0x1F)===5);
+                            if (idr) {
+                                const sc = new Uint8Array([0,0,0,1]);
+                                const len = sc.length*3 + this.spsData.length + this.ppsData.length + idr.length;
+                                frameData = new Uint8Array(len);
+                                let o = 0;
+                                frameData.set(sc, o); o += 4; frameData.set(this.spsData, o); o += this.spsData.length;
+                                frameData.set(sc, o); o += 4; frameData.set(this.ppsData, o); o += this.ppsData.length;
+                                frameData.set(sc, o); o += 4; frameData.set(idr, o);
+                            }
+                        }
+                        this.decodeFrame(frameData, true);
+                        this.waitingForKeyFrame = false;
+                    }
+                } else if (!this.waitingForKeyFrame && this.videoDecoder) {
+                    this.decodeFrame(data, false);
+                }
+            }
+        }
+
+        parseNALUnits(data) {
+            const units = [];
+            let i = 0;
+            while (i < data.length) {
+                if (i+3 < data.length && data[i]===0 && data[i+1]===0 && data[i+2]===0 && data[i+3]===1) {
+                    i += 4;
+                    const start = i;
+                    while (i < data.length) {
+                        if (i+3 < data.length && (data[i]===0 && data[i+1]===0 && data[i+2]===0 && data[i+3]===1 ||
+                            data[i]===0 && data[i+1]===0 && data[i+2]===1)) break;
+                        i++;
+                    }
+                    units.push(data.slice(start, i));
+                } else if (i+2 < data.length && data[i]===0 && data[i+1]===0 && data[i+2]===1) {
+                    i += 3;
+                    const start = i;
+                    while (i < data.length) {
+                        if (i+2 < data.length && data[i]===0 && data[i+1]===0 && data[i+2]===1) break;
+                        if (i+3 < data.length && data[i]===0 && data[i+1]===0 && data[i+2]===0 && data[i+3]===1) break;
+                        i++;
+                    }
+                    units.push(data.slice(start, i));
+                } else i++;
+            }
+            return units;
+        }
+
+        initVideoDecoder() {
+            if (!this.spsData || !this.ppsData) return;
+
+            // 检查浏览器是否支持 VideoDecoder
+            if (typeof VideoDecoder === 'undefined') {
+                console.error(`[手机${this.id}] 当前浏览器不支持 VideoDecoder API`);
+                console.error(`[手机${this.id}] 请使用 Chrome 94+ 或 Edge 94+ 浏览器`);
+                alert('您的浏览器不支持视频解码,请使用最新版 Chrome 或 Edge 浏览器');
+                return;
+            }
+
+            try {
+                const p = this.spsData[1], c = this.spsData[2], l = this.spsData[3];
+                const codec = `avc1.${p.toString(16).padStart(2,'0')}${c.toString(16).padStart(2,'0')}${l.toString(16).padStart(2,'0')}`;
+
+                console.log(`[手机${this.id}] 初始化视频解码器, codec: ${codec}`);
+
+                this.videoDecoder = new VideoDecoder({
+                    output: (frame) => {
+                        if (!this.videoCtx) {
+                            frame.close();
+                            return;
+                        }
+
+                        // 输出视频帧分辨率和横竖屏信息
+                        const frameWidth = frame.displayWidth || frame.codedWidth;
+                        const frameHeight = frame.displayHeight || frame.codedHeight;
+                        const isLandscape = frameWidth > frameHeight;
+
+                        console.log(`[手机${this.id}] 视频帧分辨率: ${frameWidth}x${frameHeight}, 横屏: ${isLandscape}`);
+
+                        const canvasWidth = this.videoCanvas.width;
+                        const canvasHeight = this.videoCanvas.height;
+
+                        // 保存当前的变换状态
+                        this.videoCtx.save();
+
+                        // 根据旋转角度旋转 canvas
+                        if (this.lastRotation === 1) {
+                            // 横屏 (90度)
+                            this.videoCtx.translate(canvasWidth, 0);
+                            this.videoCtx.rotate(Math.PI / 2);
+                            this.videoCtx.drawImage(frame, 0, 0, canvasHeight, canvasWidth);
+                        } else {
+                            // 竖屏 (0度)
+                            this.videoCtx.drawImage(frame, 0, 0, canvasWidth, canvasHeight);
+                        }
+
+                        // 恢复变换状态
+                        this.videoCtx.restore();
+
+                        frame.close();
+                        this.videoFrameCount++;
+                        this.updateVideoStats();
+                    },
+                    error: (e) => {
+                        console.error(`[手机${this.id}] 解码器错误:`, e);
+                    }
+                });
+
+                const config = {
+                    codec,
+                    optimizeForLatency: true,
+                    hardwareAcceleration: 'prefer-hardware'
+                };
+                console.log(`[手机${this.id}] 配置解码器:`, config);
+                this.videoDecoder.configure(config);
+                console.log(`[手机${this.id}] 解码器状态:`, this.videoDecoder.state);
+            } catch (e) {
+                console.error(`[手机${this.id}] 初始化解码器失败:`, e);
+            }
+        }
+        updateVideoStats() {
+            if (this.videoFrameCount % 30 === 0 && this.videoStartTime) {
+                const elapsed = (Date.now() - this.videoStartTime) / 1000;
+                const fps = this.videoFrameCount / elapsed || 0;
+                this.videoStatsEl.textContent = `帧数: ${this.videoFrameCount} | FPS: ${fps.toFixed(1)}`;
+            }
+        }
+        decodeFrame(data, isKey) {
+            if (!this.videoDecoder || this.videoDecoder.state !== 'configured') {
+                return;
+            }
+            try {
+                const chunk = new EncodedVideoChunk({
+                    type: isKey ? 'key' : 'delta',
+                    timestamp: Date.now() * 1000,
+                    data
+                });
+                this.videoDecoder.decode(chunk);
+            } catch (e) {}
+        }
+
+        initCanvasTouch() {
+            const canvas = this.videoCanvas;
+            if (!canvas) return;
+
+            let isDown = false;
+
+            const getNorm = (e) => {
+                const r = canvas.getBoundingClientRect();
+                let x = (e.clientX - r.left) / r.width;
+                let y = (e.clientY - r.top) / r.height;
+
+                // 如果是横屏，需要旋转坐标
+                // 横屏时 canvas 被旋转了 90 度
+                // 旋转 90 度后：原来的右上角(x=1, y=0) 变成 左上角(x=0, y=0)
+                if (this.lastRotation === 1) {
+                    // 横屏旋转 90 度后的坐标转换
+                    const temp = x;
+                    x = y;
+                    y = 1 - temp;
+                }
+
+                return {
+                    x: Math.max(0, Math.min(1, x)),
+                    y: Math.max(0, Math.min(1, y))
+                };
+            };
+
+            const showClickTip = (clientX, clientY) => {
+                const r = canvas.getBoundingClientRect();
+                const div = document.createElement('div');
+                div.className = 'touch-indicator';
+                div.style.left = clientX + 'px';
+                div.style.top  = clientY + 'px';
+                div.style.transition = 'opacity 0.4s ease-out';
+                div.style.opacity = '1';
+                document.body.appendChild(div);
+                setTimeout(() => { div.style.opacity = '0'; }, 50);
+                setTimeout(() => div.remove(), 500);
+            };
+
+            canvas.addEventListener('mousedown', (e) => {
+                isDown = true;
+                const c = getNorm(e);
+                showClickTip(e.clientX, e.clientY);
+                this.send({type: 'touch', data: {x: c.x, y: c.y, action: 0}});
+            });
+
+            canvas.addEventListener('mousemove', (e) => {
+                if (!isDown) return;
+                const c = getNorm(e);
+                this.send({type: 'touch', data: {x: c.x, y: c.y, action: 2}});
+            });
+
+            canvas.addEventListener('mouseup', (e) => {
+                if (!isDown) return;
+                isDown = false;
+                const c = getNorm(e);
+                this.send({type: 'touch', data: {x: c.x, y: c.y, action: 1}});
+            });
+
+            canvas.addEventListener('mouseleave', (e) => {
+                if (isDown) {
+                    isDown = false;
+                    const c = getNorm(e);
+                    this.send({type: 'touch', data: {x: c.x, y: c.y, action: 1}});
+                }
+            });
+
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (e.touches.length === 0) return;
+                isDown = true;
+                const t = e.touches[0];
+                const c = getNorm(t);
+                showClickTip(t.clientX, t.clientY);
+                this.send({type: 'touch', data: {x: c.x, y: c.y, action: 0}});
+            });
+
+            canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                if (!isDown || e.touches.length === 0) return;
+                const t = e.touches[0];
+                const c = getNorm(t);
+                this.send({type: 'touch', data: {x: c.x, y: c.y, action: 2}});
+            });
+
+            canvas.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                if (!isDown) return;
+                isDown = false;
+                if (e.changedTouches.length > 0) {
+                    const t = e.changedTouches[0];
+                    const c = getNorm(t);
+                    this.send({type: 'touch', data: {x: c.x, y: c.y, action: 1}});
+                }
+            });
+
+            canvas.addEventListener('touchcancel', (e) => {
+                e.preventDefault();
+                if (isDown) {
+                    isDown = false;
+                    this.send({type: 'touch', data: {x: 0.5, y: 0.5, action: 1}});
+                }
+            });
+        }
+        remove() {
+            if (this.ws) this.ws.close();
+            if (this.panel) this.panel.remove();
+            if (this.listItem) this.listItem.remove();
+            const idx = phones.findIndex(p => p.id === this.id);
+            if (idx > -1) phones.splice(idx, 1);
+        }
+    }
+
+    // =============================================
+    // 全局函数
+    // =============================================
+    const phones = [];
+    let nextId = 1;
+    const API_URL = '../api.php';
+
+    // API 请求函数
+    async function apiRequest(action, data = {}) {
+        try {
+            const response = await fetch(`${API_URL}?action=${action}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            return await response.json();
+        } catch (error) {
+            console.error('API Error:', error);
+            return { success: false, message: '网络错误' };
+        }
+    }
+
+    // 添加带参数的手机
+    function addPhoneWithData(name, wsUrl) {
+        const p = new Phone(nextId++, name, wsUrl);
+        phones.push(p);
+        
+        // 获取当前用户角色
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        const isAdmin = currentUser && currentUser.role === 'admin';
+        
+        // 如果是普通用户,自动连接并使用普通画质
+        if (!isAdmin) {
+            // 延迟一下确保UI已经渲染
+            setTimeout(() => {
+                p.connect();
+                // 等待连接成功后启动视频
+                p.ws.addEventListener('open', () => {
+                    setTimeout(() => p.startNormalQuality(), 500);
+                });
+            }, 500);
+        }
+        
+        // 应用当前缩放比例
+        const scaleSlider = document.getElementById('canvasScale');
+        if (scaleSlider) {
+            const scale = parseFloat(scaleSlider.value);
+            const inner = p.panel.querySelector('.canvas-inner');
+            const canvas = p.panel.querySelector('canvas');
+            if (inner && canvas) {
+                inner.style.width = (180 * scale) + 'px';
+                inner.style.height = (320 * scale) + 'px';
+                canvas.style.transform = `scale(${scale})`;
+                p.panel.style.width = (180 * scale + 12) + 'px';
+            }
+        }
+    }
+
+    function addPhone() {
+        const p = new Phone(nextId++);
+        phones.push(p);
+        // 应用当前缩放比例
+        const scaleSlider = document.getElementById('canvasScale');
+        if (scaleSlider) {
+            const scale = parseFloat(scaleSlider.value);
+            const inner = p.panel.querySelector('.canvas-inner');
+            const canvas = p.panel.querySelector('canvas');
+            if (inner && canvas) {
+                inner.style.width = (180 * scale) + 'px';
+                inner.style.height = (320 * scale) + 'px';
+                canvas.style.transform = `scale(${scale})`;
+                p.panel.style.width = (180 * scale + 12) + 'px';
+            }
+        }
+    }
+
+    function connectAll() { phones.forEach(p => p.connect()); }
+    function startAllVideo() { phones.forEach(p => p.startVideo()); }
+    function stopAllVideo() { phones.forEach(p => p.stopVideo()); }
+    function clearAll() { while(phones.length) phones[0].remove(); }
+
+    // 登录状态管理
+    const currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
+
+    // 显示当前登录用户
+    function displayCurrentUser() {
+        const usernameEl = document.getElementById('displayUsername');
+        if (currentUser && usernameEl) {
+            usernameEl.textContent = currentUser.username;
+        } else if (usernameEl) {
+            usernameEl.textContent = '未登录';
+        }
+    }
+
+    // 退出登录
+    function handleLogout() {
+        if (confirm('确定要退出登录吗？')) {
+            localStorage.removeItem('currentUser');
+            window.location.href = '../index.html';
+        }
+    }
+
+    // 加载用户有权限的手机
+    async function loadUserPhones() {
+        const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        if (!currentUser) return;
+
+        const result = await apiRequest('getUserPhones', { user_id: currentUser.id });
+        console.log('API返回:', result);
+        
+        if (result.success && result.phones && result.phones.length > 0) {
+            result.phones.forEach(phone => {
+                addPhoneWithData(phone.name, phone.ws_address);
+            });
+            console.log(`已加载 ${result.phones.length} 个手机`);
+        } else {
+            // 如果没有权限的手机,不添加默认手机
+            console.log('当前用户没有权限的手机');
+        }
+    }
+
+    // 页面加载时显示用户信息并加载手机
+    window.onload = () => {
+        displayCurrentUser();
+        loadUserPhones();
+    };
+
+    // 画面缩放
+    const scaleSlider = document.getElementById('canvasScale');
+    const scaleDisplay = document.getElementById('scaleDisplay');
+
+    if (scaleSlider && scaleDisplay) {
+        /**
+ * 处理缩放比例变化事件，更新页面元素尺寸
+ * @param {Event} e - 缩放比例变化事件对象
+ * @description 
+ * - 根据输入值计算并显示缩放百分比
+ * - 缩放所有canvas元素
+ * - 调整phone-panel及其内部canvas-inner元素的宽度和高度
+ * - 基础宽度为180px，基础高度为320px
+ * - 面板宽度额外增加12px(6px*2)以容纳padding
+ */
+scaleSlider.addEventListener('input', (e) => {
+            const scale = parseFloat(e.target.value);
+            scaleDisplay.textContent = `${Math.round(scale * 100)}%`;
+            document.querySelectorAll('canvas').forEach(c => {
+                c.style.transform = `scale(${scale})`;
+            });
+            // 更新 canvas-inner 和面板的宽度
+            document.querySelectorAll('.phone-panel').forEach(p => {
+                const inner = p.querySelector('.canvas-inner');
+                if (inner) {
+                    const baseWidth = 180;
+                    const baseHeight = 320;
+                    inner.style.width = (baseWidth * scale) + 'px';
+                    inner.style.height = (baseHeight * scale) + 'px';
+                    p.style.width = (baseWidth * scale + 12) + 'px'; // 12是phone-content的padding 6*2
+                }
+            });
+        });
+    }
+
+
+</script>
+</body>
+</html>
